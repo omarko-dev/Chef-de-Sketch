@@ -1,0 +1,45 @@
+{
+  "name": "chef-de-sketch",
+  "version": "1.0.0",
+  "description": "A fun drawing application where users can create and save dish sketches.",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "keywords": [
+    "react",
+    "drawing",
+    "canvas",
+    "menu"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
+    "react": "^17.0.2",
+    "react-color": "^2.19.3",
+    "react-dom": "^17.0.2",
+    "react-scripts": "^4.0.3"
+  },
+  "homepage": "http://yourhomepage.com",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/yourusername/chef-de-sketch.git"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

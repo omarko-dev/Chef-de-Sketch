@@ -1,0 +1,79 @@
+body {
+    background-color: #f0f8ff;
+    font-family: 'Open Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+h1, h2 {
+    color: #ff6347;
+}
+
+canvas {
+    border: 2px solid #ff7f50;
+    background-color: #ffffff;
+    display: block;
+    margin: 20px auto;
+}
+
+button {
+    background-color: #32cd32;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #2e9c44;
+}
+
+.menu-board {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100%;
+    background: #fffaf0;
+    border-right: 2px solid #ffa500;
+    padding: 20px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+.menu-board.open {
+    transform: translateX(0);
+}
+
+.menu-toggle-button {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1100;
+}
+
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+.saved-dish {
+    margin: 10px;
+    border: 1px solid #ff69b4;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #ffe4e1;
+    cursor: grab;
+    transition: transform 0.2s;
+}
+
+.saved-dish:hover {
+    transform: scale(1.05);
+}

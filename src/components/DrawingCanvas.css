@@ -1,0 +1,77 @@
+.drawing-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: relative;
+  animation: fadeIn 0.4s ease;
+}
+
+canvas {
+  border: 2px solid #ffcc00;
+  background-color: #fff;
+  margin: 0 !important;
+  border-radius: 5px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.4s ease;
+}
+
+.tool-btn {
+  background-color: #fff;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.tool-btn:hover {
+  transform: scale(1.05);
+}
+
+.active-tool {
+  background-color: #ffe45e;
+  border-color: #ffc107;
+}
+
+.brush-size-dropdown {
+  padding: 6px;
+  border-radius: 8px;
+  border: 2px solid #ccc;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease;
+}
+
+.color-picker-popup {
+  position: absolute;
+  top: 300px;
+  animation: fadeIn 0.2s ease;
+  z-index: 999;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.save-button {
+  margin-top: 10px;
+  background-color: #32cd32;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.save-button:hover {
+  background-color: #2baa2b;
+}
