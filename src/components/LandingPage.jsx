@@ -1,28 +1,26 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SketchPicker } from "react-color";
+import { questThemes } from "./QuestThemes";
 
-const LandingPage = () => {
-  useEffect(() => {
-    document.body.style.margin = "0";
-    document.body.style.padding = "0";
-    setShowLogoBoard(true);
-  }, []);
-
-  const [pageBgColor, setPageBgColor] = useState("#ffffff");
-  const [showSideMenu, setShowSideMenu] = useState(false);
+function LandingPage({ activeTheme }) {
+  // Example: set up for open/closed state, page background color, etc.
   const [isOpen, setIsOpen] = useState(true);
+  const [showSideMenu, setShowSideMenu] = useState(false);
+  const [pageBgColor, setPageBgColor] = useState("#ffffff");
   const [showBgColorPicker, setShowBgColorPicker] = useState(false);
 
+  // Logo-drawing board
   const [showLogoBoard, setShowLogoBoard] = useState(false);
   const logoCanvasRef = useRef(null);
   const [logoIsDrawing, setLogoIsDrawing] = useState(false);
   const [logoIsErasing, setLogoIsErasing] = useState(false);
-  const [logoColor, setLogoColor] = useState("#000");
   const [logoLineWidth, setLogoLineWidth] = useState(5);
+  const [logoColor, setLogoColor] = useState("#000");
   const [showLogoColorPicker, setShowLogoColorPicker] = useState(false);
   const [logoData, setLogoData] = useState(null);
   const [lastLogoPos, setLastLogoPos] = useState({ x: 0, y: 0 });
 
+  // Dynamic sizing for canvases
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const updateCanvasSize = () => {
@@ -36,6 +34,7 @@ const LandingPage = () => {
     return () => window.removeEventListener("resize", updateCanvasSize);
   }, []);
 
+  // Draw the logo on mousedown/mousemove/mouseup
   const handleLogoMouseDown = (e) => {
     setLogoIsDrawing(true);
     const rect = logoCanvasRef.current.getBoundingClientRect();
@@ -68,9 +67,33 @@ const LandingPage = () => {
     setShowLogoBoard(false);
   };
 
+  // Basic restaurant info
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [directionsLink, setDirectionsLink] = useState("");
+  const [orderLink, setOrderLink] = useState("");
+  const [openingHours, setOpeningHours] = useState("");
+
+  const handleCall = () => {
+    if (phoneNumber.trim()) {
+      window.location.href = `tel:${phoneNumber.trim()}`;
+    }
+  };
+  const handleDirections = () => {
+    if (directionsLink.trim()) {
+      window.open(directionsLink.trim(), "_blank");
+    }
+  };
+  const handleOrderOnline = () => {
+    if (orderLink.trim()) {
+      window.open(orderLink.trim(), "_blank");
+    }
+  };
+
+  // Categories (and their dishes)
   const [categories, setCategories] = useState([]);
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [categoryName, setCategoryName] = useState("");
+
   const handleSaveCategory = () => {
     if (!categoryName.trim()) return;
     setCategories([...categories, { name: categoryName, dishes: [] }]);
@@ -78,6 +101,7 @@ const LandingPage = () => {
     setShowCategoryInput(false);
   };
 
+  // Dish-drawing board
   const [showDishBoard, setShowDishBoard] = useState(false);
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(null);
   const dishCanvasRef = useRef(null);
@@ -88,16 +112,12 @@ const LandingPage = () => {
   const [showDishColorPicker, setShowDishColorPicker] = useState(false);
   const [dishData, setDishData] = useState(null);
 
-  const [showDishDetails, setShowDishDetails] = useState(false);
-  const [dishName, setDishName] = useState("");
-  const [dishPrice, setDishPrice] = useState("");
-  const [lastDishPos, setLastDishPos] = useState({ x: 0, y: 0 });
-
   const handleDishMouseDown = (e) => {
     setDishIsDrawing(true);
     const rect = dishCanvasRef.current.getBoundingClientRect();
     setLastDishPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
+  const [lastDishPos, setLastDishPos] = useState({ x: 0, y: 0 });
   const handleDishMouseMove = (e) => {
     if (!dishIsDrawing) return;
     const ctx = dishCanvasRef.current.getContext("2d");
@@ -125,8 +145,14 @@ const LandingPage = () => {
     setShowDishBoard(false);
     setShowDishDetails(true);
   };
+
+  // Dish details form (name + price)
+  const [showDishDetails, setShowDishDetails] = useState(false);
+  const [dishName, setDishName] = useState("");
+  const [dishPrice, setDishPrice] = useState("");
+
   const handleDishDetailsDone = () => {
-    if (selectedCategoryIndex == null || !dishName.trim() || !dishPrice.trim()) {
+    if (selectedCategoryIndex === null || !dishName.trim() || !dishPrice.trim()) {
       return;
     }
     const updated = [...categories];
@@ -143,33 +169,103 @@ const LandingPage = () => {
     setDishData(null);
   };
 
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [directionsLink, setDirectionsLink] = useState("");
-  const [orderLink, setOrderLink] = useState("");
-  const handleCall = () => {
-    if (phoneNumber.trim()) {
-      window.location.href = `tel:${phoneNumber.trim()}`;
-    }
-  };
-  const handleDirections = () => {
-    if (directionsLink.trim()) {
-      window.open(directionsLink.trim(), "_blank");
-    }
-  };
-  const handleOrderOnline = () => {
-    if (orderLink.trim()) {
-      window.open(orderLink.trim(), "_blank");
-    }
-  };
-
-  const [openingHours, setOpeningHours] = useState("");
-
+  // For removing dishes on hover
   const [hoveredDish, setHoveredDish] = useState({ catIndex: null, dishIndex: null });
   function removeDish(categoryIndex, dishIndex) {
     const updatedCategories = [...categories];
     updatedCategories[categoryIndex].dishes.splice(dishIndex, 1);
     setCategories(updatedCategories);
   }
+
+  // Quest tasks from the chosen theme
+  const [themeTasks, setThemeTasks] = useState(
+    activeTheme ? activeTheme.tasks : questThemes[0].tasks
+  );
+  // Mark tasks complete if conditions are met
+  useEffect(() => {
+    if (!activeTheme) return;
+    console.log("[DEBUG] themeTasks before checking:", themeTasks);
+    setThemeTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        // For theme 1's Pizza Party, example checks:
+        if (task.id === 101 && categories.some(cat => cat.name === "Pizzas")) {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 102 && categories.some(cat =>
+            cat.dishes?.some(dish => parseFloat(dish.price) >= 12)
+          )) {
+          return { ...task, isComplete: true };
+        }
+        // ...additional checks...
+        return task;
+      })
+    );
+    console.log("[DEBUG] themeTasks after checking:", themeTasks);
+  }, [categories, logoData, activeTheme]);
+
+  // Toggling the quest menu
+  const [showQuestMenu, setShowQuestMenu] = useState(false);
+  const tasksRemaining = themeTasks.filter((t) => !t.isComplete).length;
+
+  // On component mount, show draw logo board initially (optional)
+  useEffect(() => {
+    document.body.style.margin = "0";
+    document.body.style.padding = "0";
+    setShowLogoBoard(true);
+  }, []);
+
+  // Debugging: Log tasks on every render
+  useEffect(() => {
+    console.log("[DEBUG] Tasks (before):", JSON.stringify(themeTasks, null, 2));
+    setThemeTasks((prev) =>
+      prev.map((task) => {
+        // Pizza Party (IDs 101–105)
+        if (task.id === 101 && categories.some((cat) => cat.name.toLowerCase().includes("pizza"))) {
+          return { ...task, isComplete: true };
+        }
+        if (
+          task.id === 102 &&
+          categories.some((cat) => cat.dishes?.some((dish) => parseFloat(dish.price) >= 12))
+        ) {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 103 && logoData) {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 104 && pageBgColor.toLowerCase() !== "#ffffff") {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 105 && isOpen) {
+          return { ...task, isComplete: true };
+        }
+
+        // Taco Fiesta (IDs 201–205)
+        if (task.id === 201 && categories.some((cat) => cat.name.toLowerCase().includes("tacos"))) {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 202 && logoData) {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 203 && phoneNumber.trim()) {
+          return { ...task, isComplete: true };
+        }
+        if (task.id === 204 && categories.some((cat) => cat.dishes?.some((dish) => dish.image))) {
+          return { ...task, isComplete: true };
+        }
+        if (
+          task.id === 205 &&
+          categories.some((cat) =>
+            cat.dishes?.some((dish) => dish.name.toLowerCase().includes("spicy fiesta"))
+          )
+        ) {
+          return { ...task, isComplete: true };
+        }
+
+        return task;
+      })
+    );
+    console.log("[DEBUG] Tasks (after):", JSON.stringify(themeTasks, null, 2));
+  }, [categories, logoData, pageBgColor, isOpen, phoneNumber, themeTasks]);
 
   return (
     <div
@@ -183,15 +279,21 @@ const LandingPage = () => {
         overflow: "hidden",
       }}
     >
+      {/* "Open" / "Closed" indicator */}
       <div style={{ position: "absolute", top: "10px", right: "10px" }}>
-        <span style={{ color: isOpen ? "green" : "red", fontSize: "1.2rem" }}>
-          ●
-        </span>
-        <span style={{ color: isOpen ? "green" : "red", fontSize: "1.2rem", marginLeft: "4px" }}>
+        <span style={{ color: isOpen ? "green" : "red", fontSize: "1.2rem" }}>●</span>
+        <span
+          style={{
+            color: isOpen ? "green" : "red",
+            fontSize: "1.2rem",
+            marginLeft: "4px",
+          }}
+        >
           {isOpen ? "Open" : "Closed"}
         </span>
       </div>
 
+      {/* Sliding side menu */}
       <div
         style={{
           position: "fixed",
@@ -207,15 +309,14 @@ const LandingPage = () => {
           boxSizing: "border-box",
         }}
       >
-        {/* Side Menu Close Button */}
+        {/* Close Button */}
         <button
           onClick={() => setShowSideMenu(false)}
           style={{
-            backgroundColor: "#add8e6",
-            border: "none",
+            backgroundColor: "#F57C00",
             color: "#fff",
             cursor: "pointer",
-            fontSize: "1.5rem",
+            fontSize: "1.4rem",
             fontWeight: "bold",
             position: "absolute",
             top: "10px",
@@ -223,7 +324,9 @@ const LandingPage = () => {
             width: "36px",
             height: "36px",
             borderRadius: "50%",
-            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           X
@@ -232,106 +335,102 @@ const LandingPage = () => {
         <h3 style={{ marginTop: "50px", padding: 0 }}>Restaurant Panel</h3>
         <hr />
 
-        <input
-          type="text"
-          placeholder="Enter Restaurant Name"
-          style={{
-            width: "80%",
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            margin: "10px 0",
-          }}
-        />
+        {/* Phone, directions, order link inputs */}
+        <div style={{ marginBottom: "10px" }}>
+          <label>Phone Number:</label>
+          <input
+            type="text"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            style={{
+              width: "90%",
+              padding: "6px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
 
-        <div onClick={() => setIsOpen(!isOpen)} style={{ display: "flex", gap: "6px", cursor: "pointer" }}>
-          <span style={{ color: isOpen ? "green" : "red", fontSize: "1.2rem" }}>●</span>
-          <span style={{ color: isOpen ? "green" : "red", fontSize: "1.2rem" }}>
+        <div style={{ marginBottom: "10px" }}>
+          <label>Directions Link:</label>
+          <input
+            type="text"
+            value={directionsLink}
+            onChange={(e) => setDirectionsLink(e.target.value)}
+            style={{
+              width: "90%",
+              padding: "6px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "10px" }}>
+          <label>Order Link:</label>
+          <input
+            type="text"
+            value={orderLink}
+            onChange={(e) => setOrderLink(e.target.value)}
+            style={{
+              width: "90%",
+              padding: "6px",
+              borderRadius: "4px",
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        {/* Toggle Open/Closed button */}
+        <div style={{ marginBottom: "10px" }}>
+          <button
+            onClick={() => setIsOpen((prev) => !prev)}
+            style={{
+              backgroundColor: "#9acd32",
+              color: "#fff",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              cursor: "pointer",
+              marginRight: "10px",
+            }}
+          >
+            Toggle {isOpen ? "Open" : "Closed"}
+          </button>
+          <span style={{ marginLeft: "8px", color: isOpen ? "green" : "red", fontWeight: "bold" }}>
             {isOpen ? "Open" : "Closed"}
           </span>
         </div>
 
-        <label style={{ display: "block", margin: "6px 0 4px" }}>Opening Hours:</label>
-        <input
-          type="text"
-          placeholder="e.g. 8:00 AM - 10:00 PM"
-          value={openingHours}
-          onChange={(e) => setOpeningHours(e.target.value)}
-          style={{
-            width: "80%",
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            marginBottom: "10px",
-          }}
-        />
-
-        <label style={{ display: "block", margin: "6px 0 4px" }}>Phone Number:</label>
-        <input
-          type="text"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          style={{
-            width: "80%",
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            marginBottom: "10px",
-          }}
-          placeholder="e.g. +123456789"
-        />
-
-        <label style={{ display: "block", margin: "6px 0 4px" }}>Directions Link:</label>
-        <input
-          type="text"
-          value={directionsLink}
-          onChange={(e) => setDirectionsLink(e.target.value)}
-          style={{
-            width: "80%",
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            marginBottom: "10px",
-          }}
-          placeholder="Google Maps URL"
-        />
-
-        <label style={{ display: "block", margin: "6px 0 4px" }}>Order Link:</label>
-        <input
-          type="text"
-          value={orderLink}
-          onChange={(e) => setOrderLink(e.target.value)}
-          style={{
-            width: "80%",
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            marginBottom: "10px",
-          }}
-          placeholder="Online ordering URL"
-        />
-
-        <button
-          onClick={() => setShowLogoBoard(true)}
-          style={{
-            backgroundColor: "#87cefa",
-            color: "#fff",
-            border: "none",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          Draw Logo
-        </button>
+        {/* Category management */}
+        <div style={{ marginBottom: "10px" }}>
+          <button
+            style={{
+              backgroundColor: "#32cd32",
+              color: "#fff",
+              border: "none",
+              padding: "10px 16px",
+              borderRadius: "6px",
+              cursor: "pointer",
+              transition: "transform 0.2s", // Animation return
+            }}
+            onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
+            onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+            onClick={() => {
+              setCategories([...categories, { name: "New Category" }]);
+            }}
+          >
+            + Add Category
+          </button>
+        </div>
       </div>
 
-      {/* Add Restaurant Info Button */}
+      {/* Toggle button for side menu */}
       {!showSideMenu && (
         <button
           onClick={() => setShowSideMenu(true)}
           style={{
-            backgroundColor: "#add8e6",
+            backgroundColor: "#F57C00",
             color: "#fff",
             border: "none",
             padding: "8px 16px",
@@ -343,10 +442,11 @@ const LandingPage = () => {
             zIndex: 9999,
           }}
         >
-          Add Restaurant Info
+          Restaurant Info
         </button>
       )}
 
+      {/* Pick BG color button */}
       <div
         style={{
           position: "fixed",
@@ -356,11 +456,11 @@ const LandingPage = () => {
         }}
       >
         <button
-          onClick={() => setShowBgColorPicker(!showBgColorPicker)}
+          onClick={() => setShowBgColorPicker((prev) => !prev)}
           style={{
             padding: "10px 16px",
             borderRadius: "6px",
-            backgroundColor: "#87cefa",
+            backgroundColor: "#F57C00",
             color: "#fff",
             cursor: "pointer",
             border: "none",
@@ -380,13 +480,17 @@ const LandingPage = () => {
               border: "1px solid #ccc",
             }}
           >
-            <SketchPicker color={pageBgColor} onChangeComplete={(c) => setPageBgColor(c.hex)} />
+            <SketchPicker
+              color={pageBgColor}
+              onChangeComplete={(c) => setPageBgColor(c.hex)}
+            />
           </div>
         )}
       </div>
 
+      {/* Display saved logo (if any) + phone/directions/order */}
       {logoData && (
-        <div style={{ marginTop: "0", padding: 0 }}>
+        <div style={{ padding: 0 }}>
           <img
             src={logoData}
             alt="Saved Logo"
@@ -406,6 +510,7 @@ const LandingPage = () => {
         </div>
       )}
 
+      {/* Category navigation */}
       {categories.length > 0 && (
         <div
           style={{
@@ -433,7 +538,8 @@ const LandingPage = () => {
                 backgroundColor: "transparent",
                 fontSize: "1.2rem",
                 cursor: "pointer",
-                color: pageBgColor.toLowerCase() === "#ffffff" ? "#000" : pageBgColor,
+                color:
+                  pageBgColor.toLowerCase() === "#ffffff" ? "#000" : pageBgColor,
               }}
             >
               {cat.name}
@@ -442,6 +548,7 @@ const LandingPage = () => {
         </div>
       )}
 
+      {/* Category Sections */}
       {categories.map((cat, i) => (
         <div key={i} id={`category-${i}`} style={{ marginTop: "30px" }}>
           <h3 style={{ fontSize: "2rem", margin: 0, padding: 0 }}>{cat.name}</h3>
@@ -480,7 +587,6 @@ const LandingPage = () => {
                     {dish.name}
                   </p>
                   <p style={{ fontSize: "1.2rem", margin: 0 }}>${dish.price}</p>
-a
                   {hoveredDish.catIndex === i && hoveredDish.dishIndex === di && (
                     <button
                       onClick={() => removeDish(i, di)}
@@ -531,10 +637,12 @@ a
         </div>
       ))}
 
+      {/* Add Category Button */}
       <div style={{ marginTop: "40px", textAlign: "center" }}>
+        {/* Animated "Add Category" Button & Field */}
         <div style={{ position: "relative", width: "400px", margin: "0 auto" }}>
           <button
-            onClick={() => setShowCategoryInput(!showCategoryInput)}
+            onClick={() => setShowCategoryInput((prev) => !prev)}
             style={{
               position: "absolute",
               left: showCategoryInput ? "calc(50% + 215px)" : "calc(50% - 0px)",
@@ -542,15 +650,17 @@ a
               transition: "left 0.5s",
               padding: "10px 20px",
               borderRadius: "8px",
-              backgroundColor: "#87cefa",
+              backgroundColor: "#F57C00",
               color: "#fff",
               fontSize: "1.2rem",
               cursor: "pointer",
+              border: "none",
               whiteSpace: "nowrap",
             }}
           >
             Add Category
           </button>
+
           {showCategoryInput && (
             <div
               style={{
@@ -579,12 +689,13 @@ a
               <button
                 onClick={handleSaveCategory}
                 style={{
-                  backgroundColor: "#32cd32",
+                  backgroundColor: "#FF9800",
                   color: "#fff",
                   padding: "10px 20px",
                   borderRadius: "8px",
                   cursor: "pointer",
                   fontSize: "1.2rem",
+                  border: "none",
                 }}
               >
                 Save
@@ -594,6 +705,7 @@ a
         </div>
       </div>
 
+      {/* Logo drawing board overlay */}
       {showLogoBoard && (
         <div
           style={{
@@ -676,7 +788,10 @@ a
                   zIndex: 99999,
                 }}
               >
-                <SketchPicker color={logoColor} onChangeComplete={(c) => setLogoColor(c.hex)} />
+                <SketchPicker
+                  color={logoColor}
+                  onChangeComplete={(c) => setLogoColor(c.hex)}
+                />
               </div>
             )}
           </div>
@@ -721,6 +836,7 @@ a
         </div>
       )}
 
+      {/* Dish drawing board overlay */}
       {showDishBoard && (
         <div
           style={{
@@ -832,7 +948,10 @@ a
                   zIndex: 99999,
                 }}
               >
-                <SketchPicker color={dishColor} onChangeComplete={(c) => setDishColor(c.hex)} />
+                <SketchPicker
+                  color={dishColor}
+                  onChangeComplete={(c) => setDishColor(c.hex)}
+                />
               </div>
             )}
             <button
@@ -852,6 +971,7 @@ a
         </div>
       )}
 
+      {/* Dish details overlay */}
       {showDishDetails && (
         <div
           style={{
@@ -913,8 +1033,115 @@ a
           </div>
         </div>
       )}
+
+      {/* Quests Button */}
+      <button
+        onClick={() => setShowQuestMenu(!showQuestMenu)}
+        style={{
+          position: "fixed",
+          top: "10px",
+          right: "10px",
+          backgroundColor: "#ff8c00",
+          color: "#fff",
+          border: "none",
+          padding: "8px 16px",
+          borderRadius: "6px",
+          cursor: "pointer",
+          transition: "transform 0.2s",
+        }}
+        onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
+        onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+      >
+        Quests
+        {tasksRemaining > 0 && (
+          <span
+            style={{
+              marginLeft: "8px",
+              backgroundColor: "red",
+              borderRadius: "50%",
+              color: "#fff",
+              padding: "2px 6px",
+              fontSize: "0.9rem",
+            }}
+          >
+            {tasksRemaining}
+          </span>
+        )}
+      </button>
+
+      {/* Slide-out quest menu */}
+      {showQuestMenu && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50px",
+            right: "10px",
+            width: "240px",
+            backgroundColor: "#fff",
+            padding: "15px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            zIndex: 9999,
+          }}
+        >
+          <h3 style={{ margin: 0 }}>
+            {activeTheme ? activeTheme.name : questThemes[0].name}
+          </h3>
+          <hr />
+          {themeTasks.map((task) => (
+            <div key={task.id} style={{ marginBottom: "8px" }}>
+              <span style={{ marginRight: "8px" }}>
+                {task.isComplete ? "✔️" : "⬜️"}
+              </span>
+              {task.text}
+            </div>
+          ))}
+
+          {/* Show End Level if all tasks done */}
+          {tasksRemaining === 0 && (
+            <button
+              style={{
+                marginTop: "10px",
+                backgroundColor: "#d97536",
+                border: "none",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                transition: "transform 0.2s",
+              }}
+              onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
+              onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+              onClick={() => alert("Level Completed!")}
+            >
+              End Level
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* End Level button (always visible if tasksRemaining is 0) */}
+      {tasksRemaining === 0 && (
+        <button
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px", // was left: "20px"
+            backgroundColor: "#d97536",
+            border: "none",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: "6px",
+            cursor: "pointer",
+            zIndex: 9999,
+          }}
+          onClick={() => alert("Level Completed!")}
+        >
+          End Level
+        </button>
+      )}
     </div>
   );
-};
+}
 
 export default LandingPage;

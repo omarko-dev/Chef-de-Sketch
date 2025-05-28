@@ -1,11 +1,24 @@
-import React from "react";
+import React, { useState } from "react";
+import HomePage from "./HomePage";
 import LandingPage from "./LandingPage";
 
 function App() {
+  const [activeTheme, setActiveTheme] = useState(null);
+  const [gameStarted, setGameStarted] = useState(false);
+
+  const handleStartGame = (theme) => {
+    setActiveTheme(theme);
+    setGameStarted(true);
+  };
+
   return (
-    <div>
-      <LandingPage />
-    </div>
+    <>
+      {!gameStarted ? (
+        <HomePage onStartGame={handleStartGame} />
+      ) : (
+        <LandingPage activeTheme={activeTheme} />
+      )}
+    </>
   );
 }
 

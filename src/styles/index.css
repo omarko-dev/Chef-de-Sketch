@@ -1,33 +1,51 @@
-body {
-    background-color: #f0f8ff;
-    font-family: 'Open Sans', sans-serif;
-    margin: 0;
-    padding: 0;
+@import url("https://db.onlinewebfonts.com/c/2b3966678f6a1c8c8be202caeb49d95a?family=FOT-Yuruka+Std");
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap");
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #f0f8ff;
+  font-family: "Fredoka", sans-serif;
 }
 
-h1, h2 {
-    color: #ff6347;
+/* Force Fredoka on all elements */
+* {
+  font-family: "Fredoka", sans-serif;
+  box-sizing: border-box;
 }
 
+/* Headings, optional extra styles */
+h1 {
+  font-size: 3rem;
+  color: #000;
+}
+h2 {
+  color: #ff6347;
+}
+
+/* Canvas styling */
 canvas {
-    border: 2px solid #ff7f50;
-    background-color: #ffffff;
-    display: block;
-    margin: 20px auto;
+  border: 2px solid #ff7f50;
+  background-color: #ffffff;
+  display: block;
+  margin: 20px auto;
 }
 
+/* Buttons */
 button {
-    background-color: #32cd32;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    cursor: pointer;
-    transition: background-color 0.3s;
+  font-family: "Fredoka", sans-serif;
+  font-size: 1rem;
+  background-color: #ff8c00; /* Example new color */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 button:hover {
-    background-color: #2e9c44;
+  background-color: #ff7000; /* Slightly darker hover color */
 }
 
 .menu-board {
