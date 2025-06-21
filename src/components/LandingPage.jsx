@@ -1,27 +1,97 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SketchPicker } from "react-color";
 import { questThemes } from "./QuestThemes";
+import { useNavigate } from "react-router-dom";
 
-function LandingPage({ activeTheme }) {
-  // Example: set up for open/closed state, page background color, etc.
-  const [isOpen, setIsOpen] = useState(true);
-  const [showSideMenu, setShowSideMenu] = useState(false);
+function LandingPage({ activeTheme, onLevelComplete }) {
+  const navigate = useNavigate();
+  const [showEndScreen, setShowEndScreen] = useState(false);
+  // States
   const [pageBgColor, setPageBgColor] = useState("#ffffff");
   const [showBgColorPicker, setShowBgColorPicker] = useState(false);
 
-  // Logo-drawing board
+  const [showSideMenu, setShowSideMenu] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [directionsLink, setDirectionsLink] = useState("");
+  const [orderLink, setOrderLink] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [categories, setCategories] = useState([]);
+  const [categoryName, setCategoryName] = useState("");
+  const [showCategoryInput, setShowCategoryInput] = useState(false);
+
   const [showLogoBoard, setShowLogoBoard] = useState(false);
   const logoCanvasRef = useRef(null);
   const [logoIsDrawing, setLogoIsDrawing] = useState(false);
-  const [logoIsErasing, setLogoIsErasing] = useState(false);
-  const [logoLineWidth, setLogoLineWidth] = useState(5);
   const [logoColor, setLogoColor] = useState("#000");
   const [showLogoColorPicker, setShowLogoColorPicker] = useState(false);
+  const [logoLineWidth, setLogoLineWidth] = useState(5);
   const [logoData, setLogoData] = useState(null);
-  const [lastLogoPos, setLastLogoPos] = useState({ x: 0, y: 0 });
 
-  // Dynamic sizing for canvases
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [showDishBoard, setShowDishBoard] = useState(false);
+  const dishCanvasRef = useRef(null);
+  const [dishIsDrawing, setDishIsDrawing] = useState(false);
+  const [dishColor, setDishColor] = useState("#000");
+  const [showDishColorPicker, setShowDishColorPicker] = useState(false);
+  const [dishLineWidth, setDishLineWidth] = useState(5);
+  const [dishData, setDishData] = useState(null);
+  const [dishName, setDishName] = useState("");
+  const [dishPrice, setDishPrice] = useState("");
+  const [showDishDetails, setShowDishDetails] = useState(false);
+
+  // Which category we’re adding the dish to
+  const [activeCatIndex, setActiveCatIndex] = useState(null);
+
+  // Default tasks (adapt to your logic)
+  const [tasks, setTasks] = useState([
+    { id: 101, text: 'Create a category named "Pizzas"', isComplete: false },
+    { id: 102, text: "Add a dish priced at $12 or more", isComplete: false },
+    { id: 103, text: "Draw a pizza-themed logo", isComplete: false },
+    { id: 104, text: "Use the color picker to change the background", isComplete: false },
+    { id: 105, text: "Set the restaurant status to Open", isComplete: true },
+  ]);
+
+  // Active quest theme
+  const defaultTheme = questThemes[0];
+  const usedTheme = activeTheme || defaultTheme;
+  const [themeTasks, setThemeTasks] = useState(usedTheme.tasks || []);
+
+  // New state for the current tool
+  const [tool, setTool] = useState("brush");
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  // For showing a preview circle as cursor
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+
+  // 1) Add state for brush color:
+  const [brushColor, setBrushColor] = useState("#222");
+
+  // -----------------------------------
+  // Mark a local task complete by ID:
+  // (You can also update themeTasks similarly if needed)
+  // -----------------------------------
+  const completeTask = (taskId) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, isComplete: true } : t))
+    );
+  };
+
+  useEffect(() => {
+    console.log("LandingPage mounted");
+  }, []);
+
+  useEffect(() => {
+    if (!logoData) {
+      setShowLogoBoard(true);
+    }
+  }, [logoData]);
+
+  // Canvas Resize
+  const [canvasSize, setCanvasSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
   useEffect(() => {
     const updateCanvasSize = () => {
       setCanvasSize({
@@ -29,244 +99,221 @@ function LandingPage({ activeTheme }) {
         height: window.innerHeight,
       });
     };
-    updateCanvasSize();
     window.addEventListener("resize", updateCanvasSize);
     return () => window.removeEventListener("resize", updateCanvasSize);
   }, []);
 
-  // Draw the logo on mousedown/mousemove/mouseup
+  // Logo Canvas Handlers
   const handleLogoMouseDown = (e) => {
-    setLogoIsDrawing(true);
-    const rect = logoCanvasRef.current.getBoundingClientRect();
-    setLastLogoPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
-  const handleLogoMouseMove = (e) => {
-    if (!logoIsDrawing) return;
-    const ctx = logoCanvasRef.current.getContext("2d");
-    const rect = logoCanvasRef.current.getBoundingClientRect();
+    const canvas = logoCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    setLogoIsDrawing(true);
     ctx.beginPath();
-    ctx.moveTo(lastLogoPos.x, lastLogoPos.y);
-    ctx.lineTo(x, y);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = logoIsErasing ? 20 : logoLineWidth;
-    ctx.strokeStyle = logoIsErasing ? "#fff" : logoColor;
-    ctx.globalCompositeOperation = logoIsErasing ? "destination-out" : "source-over";
-    ctx.stroke();
-    setLastLogoPos({ x, y });
+    ctx.moveTo(x, y);
   };
+
+  const handleLogoMouseMove = (e) => {
+    if (!logoIsDrawing || (tool !== "brush" && tool !== "eraser")) return;
+    const canvas = logoCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.lineWidth = logoLineWidth;
+    ctx.lineCap = "round";
+    if (tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = brushColor;
+    }
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
   const handleLogoMouseUp = () => {
     setLogoIsDrawing(false);
+    const canvas = logoCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.closePath();
   };
+
   const saveLogo = () => {
-    if (logoCanvasRef.current) {
-      setLogoData(logoCanvasRef.current.toDataURL("image/png"));
-    }
+    const canvas = logoCanvasRef.current;
+    if (!canvas) return;
+    const data = canvas.toDataURL("image/png");
+    setLogoData(data);
     setShowLogoBoard(false);
+
+    completeTask(103);
   };
 
-  // Basic restaurant info
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [directionsLink, setDirectionsLink] = useState("");
-  const [orderLink, setOrderLink] = useState("");
-  const [openingHours, setOpeningHours] = useState("");
-
-  const handleCall = () => {
-    if (phoneNumber.trim()) {
-      window.location.href = `tel:${phoneNumber.trim()}`;
-    }
-  };
-  const handleDirections = () => {
-    if (directionsLink.trim()) {
-      window.open(directionsLink.trim(), "_blank");
-    }
-  };
-  const handleOrderOnline = () => {
-    if (orderLink.trim()) {
-      window.open(orderLink.trim(), "_blank");
-    }
-  };
-
-  // Categories (and their dishes)
-  const [categories, setCategories] = useState([]);
-  const [showCategoryInput, setShowCategoryInput] = useState(false);
-  const [categoryName, setCategoryName] = useState("");
-
-  const handleSaveCategory = () => {
-    if (!categoryName.trim()) return;
-    setCategories([...categories, { name: categoryName, dishes: [] }]);
-    setCategoryName("");
-    setShowCategoryInput(false);
-  };
-
-  // Dish-drawing board
-  const [showDishBoard, setShowDishBoard] = useState(false);
-  const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(null);
-  const dishCanvasRef = useRef(null);
-  const [dishIsDrawing, setDishIsDrawing] = useState(false);
-  const [dishIsErasing, setDishIsErasing] = useState(false);
-  const [dishLineWidth, setDishLineWidth] = useState(5);
-  const [dishColor, setDishColor] = useState("#000");
-  const [showDishColorPicker, setShowDishColorPicker] = useState(false);
-  const [dishData, setDishData] = useState(null);
-
-  const handleDishMouseDown = (e) => {
+  // Dish Canvas Handlers
+  const handleDishMouseDown = () => {
     setDishIsDrawing(true);
-    const rect = dishCanvasRef.current.getBoundingClientRect();
-    setLastDishPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    const canvas = dishCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
   };
-  const [lastDishPos, setLastDishPos] = useState({ x: 0, y: 0 });
+
   const handleDishMouseMove = (e) => {
     if (!dishIsDrawing) return;
-    const ctx = dishCanvasRef.current.getContext("2d");
-    const rect = dishCanvasRef.current.getBoundingClientRect();
+    const canvas = dishCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    ctx.beginPath();
-    ctx.moveTo(lastDishPos.x, lastDishPos.y);
-    ctx.lineTo(x, y);
+
+    ctx.lineWidth = dishLineWidth;
     ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = dishIsErasing ? 20 : dishLineWidth;
-    ctx.strokeStyle = dishIsErasing ? "#fff" : dishColor;
-    ctx.globalCompositeOperation = dishIsErasing ? "destination-out" : "source-over";
+    if (tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = brushColor;
+    }
+    ctx.lineTo(x, y);
     ctx.stroke();
-    setLastDishPos({ x, y });
+    ctx.beginPath();
+    ctx.moveTo(x, y);
   };
+
   const handleDishMouseUp = () => {
     setDishIsDrawing(false);
+    const canvas = dishCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.closePath();
   };
+
   const saveDish = () => {
-    if (dishCanvasRef.current) {
-      setDishData(dishCanvasRef.current.toDataURL("image/png"));
-    }
+    const canvas = dishCanvasRef.current;
+    if (!canvas) return;
+
+    const data = canvas.toDataURL("image/png");
+    setDishData(data);
     setShowDishBoard(false);
     setShowDishDetails(true);
   };
 
-  // Dish details form (name + price)
-  const [showDishDetails, setShowDishDetails] = useState(false);
-  const [dishName, setDishName] = useState("");
-  const [dishPrice, setDishPrice] = useState("");
-
   const handleDishDetailsDone = () => {
-    if (selectedCategoryIndex === null || !dishName.trim() || !dishPrice.trim()) {
-      return;
+    if (activeCatIndex !== null) {
+      const newCategories = [...categories];
+      const cat = { ...newCategories[activeCatIndex] };
+      const catDishes = cat.dishes ? [...cat.dishes] : [];
+
+      const newDish = {
+        image: dishData,
+        name: dishName,
+        price: dishPrice,
+      };
+      catDishes.push(newDish);
+      cat.dishes = catDishes;
+      newCategories[activeCatIndex] = cat;
+      setCategories(newCategories);
+
+      const priceNum = Number(dishPrice);
+      if (priceNum >= 12) {
+        completeTask(102);
+      }
     }
-    const updated = [...categories];
-    updated[selectedCategoryIndex].dishes.push({
-      name: dishName,
-      price: dishPrice,
-      image: dishData,
-    });
-    setCategories(updated);
     setShowDishDetails(false);
+    setDishData(null);
     setDishName("");
     setDishPrice("");
-    setSelectedCategoryIndex(null);
-    setDishData(null);
   };
 
-  // For removing dishes on hover
-  const [hoveredDish, setHoveredDish] = useState({ catIndex: null, dishIndex: null });
-  function removeDish(categoryIndex, dishIndex) {
-    const updatedCategories = [...categories];
-    updatedCategories[categoryIndex].dishes.splice(dishIndex, 1);
-    setCategories(updatedCategories);
-  }
+  // Category Handling
+  const handleSaveCategory = () => {
+    if (categoryName.trim() !== "") {
+      setCategories([...categories, { name: categoryName, dishes: [] }]);
+      setCategoryName("");
+      setShowCategoryInput(false);
 
-  // Quest tasks from the chosen theme
-  const [themeTasks, setThemeTasks] = useState(
-    activeTheme ? activeTheme.tasks : questThemes[0].tasks
-  );
-  // Mark tasks complete if conditions are met
+      if (categoryName.toLowerCase().includes("pizza")) {
+        completeTask(101); // “Create a category named ‘Pizzas’”
+      }
+    }
+  };
+
+  const removeDish = (catIndex, dishIndex) => {
+    const updated = [...categories];
+    updated[catIndex].dishes.splice(dishIndex, 1);
+    setCategories(updated);
+  };
+
+  // Actions
+  const handleCall = () => {
+    if (phoneNumber.trim()) {
+      window.open(`tel:${phoneNumber}`);
+    }
+  };
+
+  const handleDirections = () => {
+    if (directionsLink.trim()) {
+      window.open(directionsLink, "_blank");
+    }
+  };
+
+  const handleOrderOnline = () => {
+    if (orderLink.trim()) {
+      window.open(orderLink, "_blank");
+    }
+  };
+
+  // Track hovered dish for remove button
+  const [hoveredDish, setHoveredDish] = useState({
+    catIndex: null,
+    dishIndex: null,
+  });
+
+  // Handle “Add Dish” per category
+  const handleAddDishClick = (catIndex) => {
+    setActiveCatIndex(catIndex);
+    setShowDishBoard(true);
+  };
+
   useEffect(() => {
-    if (!activeTheme) return;
-    console.log("[DEBUG] themeTasks before checking:", themeTasks);
-    setThemeTasks((prevTasks) =>
-      prevTasks.map((task) => {
-        // For theme 1's Pizza Party, example checks:
-        if (task.id === 101 && categories.some(cat => cat.name === "Pizzas")) {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 102 && categories.some(cat =>
-            cat.dishes?.some(dish => parseFloat(dish.price) >= 12)
-          )) {
-          return { ...task, isComplete: true };
-        }
-        // ...additional checks...
-        return task;
-      })
-    );
-    console.log("[DEBUG] themeTasks after checking:", themeTasks);
-  }, [categories, logoData, activeTheme]);
+    if (pageBgColor !== "#ffffff") {
+      completeTask(104);
+    }
+  }, [pageBgColor]);
 
-  // Toggling the quest menu
+  useEffect(() => {
+    if (isOpen) {
+      completeTask(105);
+    }
+  }, [isOpen]);
+
+  // Quests
   const [showQuestMenu, setShowQuestMenu] = useState(false);
-  const tasksRemaining = themeTasks.filter((t) => !t.isComplete).length;
+  const tasksRemaining = tasks.filter((t) => !t.isComplete).length;
 
-  // On component mount, show draw logo board initially (optional)
   useEffect(() => {
-    document.body.style.margin = "0";
-    document.body.style.padding = "0";
-    setShowLogoBoard(true);
+    if (tasksRemaining === 0) {
+      setShowEndScreen(true);
+      if (onLevelComplete) onLevelComplete(activeTheme);
+    }
+  }, [tasksRemaining, activeTheme, onLevelComplete]);
+
+  // Global Mouse Move Handler
+  function handleMouseMoveGlobal(e) {
+    setCursorPos({ x: e.clientX, y: e.clientY });
+  }
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMoveGlobal);
+    return () => window.removeEventListener("mousemove", handleMouseMoveGlobal);
   }, []);
 
-  // Debugging: Log tasks on every render
-  useEffect(() => {
-    console.log("[DEBUG] Tasks (before):", JSON.stringify(themeTasks, null, 2));
-    setThemeTasks((prev) =>
-      prev.map((task) => {
-        // Pizza Party (IDs 101–105)
-        if (task.id === 101 && categories.some((cat) => cat.name.toLowerCase().includes("pizza"))) {
-          return { ...task, isComplete: true };
-        }
-        if (
-          task.id === 102 &&
-          categories.some((cat) => cat.dishes?.some((dish) => parseFloat(dish.price) >= 12))
-        ) {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 103 && logoData) {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 104 && pageBgColor.toLowerCase() !== "#ffffff") {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 105 && isOpen) {
-          return { ...task, isComplete: true };
-        }
-
-        // Taco Fiesta (IDs 201–205)
-        if (task.id === 201 && categories.some((cat) => cat.name.toLowerCase().includes("tacos"))) {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 202 && logoData) {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 203 && phoneNumber.trim()) {
-          return { ...task, isComplete: true };
-        }
-        if (task.id === 204 && categories.some((cat) => cat.dishes?.some((dish) => dish.image))) {
-          return { ...task, isComplete: true };
-        }
-        if (
-          task.id === 205 &&
-          categories.some((cat) =>
-            cat.dishes?.some((dish) => dish.name.toLowerCase().includes("spicy fiesta"))
-          )
-        ) {
-          return { ...task, isComplete: true };
-        }
-
-        return task;
-      })
-    );
-    console.log("[DEBUG] Tasks (after):", JSON.stringify(themeTasks, null, 2));
-  }, [categories, logoData, pageBgColor, isOpen, phoneNumber, themeTasks]);
-
+  // Render
   return (
     <div
       style={{
@@ -279,21 +326,7 @@ function LandingPage({ activeTheme }) {
         overflow: "hidden",
       }}
     >
-      {/* "Open" / "Closed" indicator */}
-      <div style={{ position: "absolute", top: "10px", right: "10px" }}>
-        <span style={{ color: isOpen ? "green" : "red", fontSize: "1.2rem" }}>●</span>
-        <span
-          style={{
-            color: isOpen ? "green" : "red",
-            fontSize: "1.2rem",
-            marginLeft: "4px",
-          }}
-        >
-          {isOpen ? "Open" : "Closed"}
-        </span>
-      </div>
-
-      {/* Sliding side menu */}
+      {/* Restaurant Info Side Menu */}
       <div
         style={{
           position: "fixed",
@@ -309,7 +342,6 @@ function LandingPage({ activeTheme }) {
           boxSizing: "border-box",
         }}
       >
-        {/* Close Button */}
         <button
           onClick={() => setShowSideMenu(false)}
           style={{
@@ -335,7 +367,6 @@ function LandingPage({ activeTheme }) {
         <h3 style={{ marginTop: "50px", padding: 0 }}>Restaurant Panel</h3>
         <hr />
 
-        {/* Phone, directions, order link inputs */}
         <div style={{ marginBottom: "10px" }}>
           <label>Phone Number:</label>
           <input
@@ -381,7 +412,6 @@ function LandingPage({ activeTheme }) {
           />
         </div>
 
-        {/* Toggle Open/Closed button */}
         <div style={{ marginBottom: "10px" }}>
           <button
             onClick={() => setIsOpen((prev) => !prev)}
@@ -397,12 +427,17 @@ function LandingPage({ activeTheme }) {
           >
             Toggle {isOpen ? "Open" : "Closed"}
           </button>
-          <span style={{ marginLeft: "8px", color: isOpen ? "green" : "red", fontWeight: "bold" }}>
+          <span
+            style={{
+              marginLeft: "8px",
+              color: isOpen ? "green" : "red",
+              fontWeight: "bold",
+            }}
+          >
             {isOpen ? "Open" : "Closed"}
           </span>
         </div>
 
-        {/* Category management */}
         <div style={{ marginBottom: "10px" }}>
           <button
             style={{
@@ -412,20 +447,17 @@ function LandingPage({ activeTheme }) {
               padding: "10px 16px",
               borderRadius: "6px",
               cursor: "pointer",
-              transition: "transform 0.2s", // Animation return
+              transition: "transform 0.2s",
             }}
             onMouseEnter={(e) => (e.target.style.transform = "scale(1.05)")}
             onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
-            onClick={() => {
-              setCategories([...categories, { name: "New Category" }]);
-            }}
+            onClick={() => setShowCategoryInput(true)}
           >
             + Add Category
           </button>
         </div>
       </div>
 
-      {/* Toggle button for side menu */}
       {!showSideMenu && (
         <button
           onClick={() => setShowSideMenu(true)}
@@ -446,7 +478,33 @@ function LandingPage({ activeTheme }) {
         </button>
       )}
 
-      {/* Pick BG color button */}
+      <div
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+        }}
+      >
+        <span
+          style={{
+            color: isOpen ? "green" : "red",
+            fontSize: "1.2rem",
+          }}
+        >
+          ●
+        </span>
+        <span
+          style={{
+            color: isOpen ? "green" : "red",
+            fontSize: "1.2rem",
+            marginLeft: "4px",
+          }}
+        >
+          {isOpen ? "Open" : "Closed"}
+        </span>
+      </div>
+
+      {/* BG Color Picker Button */}
       <div
         style={{
           position: "fixed",
@@ -488,7 +546,7 @@ function LandingPage({ activeTheme }) {
         )}
       </div>
 
-      {/* Display saved logo (if any) + phone/directions/order */}
+      {/* Logo Display */}
       {logoData && (
         <div style={{ padding: 0 }}>
           <img
@@ -500,7 +558,13 @@ function LandingPage({ activeTheme }) {
               maxWidth: "600px",
             }}
           />
-          <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              justifyContent: "center",
+            }}
+          >
             <button onClick={handleCall}>
               {phoneNumber.trim() ? `Call: ${phoneNumber}` : "Call"}
             </button>
@@ -510,7 +574,7 @@ function LandingPage({ activeTheme }) {
         </div>
       )}
 
-      {/* Category navigation */}
+      {/* Category Buttons */}
       {categories.length > 0 && (
         <div
           style={{
@@ -529,7 +593,9 @@ function LandingPage({ activeTheme }) {
             <button
               key={index}
               onClick={() =>
-                document.getElementById(`category-${index}`)?.scrollIntoView({ behavior: "smooth" })
+                document.getElementById(`category-${index}`)?.scrollIntoView({
+                  behavior: "smooth",
+                })
               }
               style={{
                 padding: "8px 16px",
@@ -539,7 +605,9 @@ function LandingPage({ activeTheme }) {
                 fontSize: "1.2rem",
                 cursor: "pointer",
                 color:
-                  pageBgColor.toLowerCase() === "#ffffff" ? "#000" : pageBgColor,
+                  pageBgColor.toLowerCase() === "#ffffff"
+                    ? "#000"
+                    : pageBgColor,
               }}
             >
               {cat.name}
@@ -571,8 +639,12 @@ function LandingPage({ activeTheme }) {
                     overflow: "hidden",
                     position: "relative",
                   }}
-                  onMouseEnter={() => setHoveredDish({ catIndex: i, dishIndex: di })}
-                  onMouseLeave={() => setHoveredDish({ catIndex: null, dishIndex: null })}
+                  onMouseEnter={() =>
+                    setHoveredDish({ catIndex: i, dishIndex: di })
+                  }
+                  onMouseLeave={() =>
+                    setHoveredDish({ catIndex: null, dishIndex: null })
+                  }
                 >
                   <img
                     src={dish.image}
@@ -583,33 +655,40 @@ function LandingPage({ activeTheme }) {
                       objectFit: "cover",
                     }}
                   />
-                  <p style={{ margin: "8px 0", fontWeight: "bold", fontSize: "1.3rem" }}>
+                  <p
+                    style={{
+                      margin: "8px 0",
+                      fontWeight: "bold",
+                      fontSize: "1.3rem",
+                    }}
+                  >
                     {dish.name}
                   </p>
                   <p style={{ fontSize: "1.2rem", margin: 0 }}>${dish.price}</p>
-                  {hoveredDish.catIndex === i && hoveredDish.dishIndex === di && (
-                    <button
-                      onClick={() => removeDish(i, di)}
-                      style={{
-                        position: "absolute",
-                        top: "5px",
-                        right: "5px",
-                        backgroundColor: "#add8e6",
-                        border: "none",
-                        borderRadius: "50%",
-                        width: "24px",
-                        height: "24px",
-                        color: "#fff",
-                        fontSize: "1rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                      }}
-                    >
-                      x
-                    </button>
-                  )}
+                  {hoveredDish.catIndex === i &&
+                    hoveredDish.dishIndex === di && (
+                      <button
+                        onClick={() => removeDish(i, di)}
+                        style={{
+                          position: "absolute",
+                          top: "5px",
+                          right: "5px",
+                          backgroundColor: "#add8e6",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: "24px",
+                          height: "24px",
+                          color: "#fff",
+                          fontSize: "1rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                        }}
+                      >
+                        x
+                      </button>
+                    )}
                 </div>
               ))}
             </div>
@@ -627,25 +706,23 @@ function LandingPage({ activeTheme }) {
               cursor: "pointer",
               margin: "20px auto",
             }}
-            onClick={() => {
-              setSelectedCategoryIndex(i);
-              setShowDishBoard(true);
-            }}
+            onClick={() => handleAddDishClick(i)}
           >
             + Add Dish
           </div>
         </div>
       ))}
 
-      {/* Add Category Button */}
+      {/* Add Category Animation */}
       <div style={{ marginTop: "40px", textAlign: "center" }}>
-        {/* Animated "Add Category" Button & Field */}
         <div style={{ position: "relative", width: "400px", margin: "0 auto" }}>
           <button
             onClick={() => setShowCategoryInput((prev) => !prev)}
             style={{
               position: "absolute",
-              left: showCategoryInput ? "calc(50% + 215px)" : "calc(50% - 0px)",
+              left: showCategoryInput
+                ? "calc(50% + 215px)"
+                : "calc(50% - 0px)",
               transform: "translateX(-50%)",
               transition: "left 0.5s",
               padding: "10px 20px",
@@ -705,7 +782,7 @@ function LandingPage({ activeTheme }) {
         </div>
       </div>
 
-      {/* Logo drawing board overlay */}
+      {/* Logo Drawing Overlay */}
       {showLogoBoard && (
         <div
           style={{
@@ -723,7 +800,7 @@ function LandingPage({ activeTheme }) {
           <h1
             style={{
               position: "absolute",
-              top: 0,
+              top: "0px",
               left: "50%",
               transform: "translateX(-50%)",
               color: "#333",
@@ -737,55 +814,81 @@ function LandingPage({ activeTheme }) {
           <div
             style={{
               position: "absolute",
-              top: "40px",
-              left: "20px",
+              left: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
               display: "flex",
-              flexDirection: "row",
+              flexDirection: "column",
               alignItems: "center",
-              gap: "8px",
-              zIndex: 3,
+              gap: "20px",
+              backgroundColor: "#e1eaf2",
+              padding: "10px",
+              borderRadius: "0 8px 8px 0",
+              zIndex: 99999,
             }}
           >
             <select
+              style={{
+                padding: "5px 10px",
+                borderRadius: "6px",
+                border: "1px solid #ccc",
+                fontSize: "1rem",
+              }}
               value={logoLineWidth}
               onChange={(e) => setLogoLineWidth(Number(e.target.value))}
-              style={{ padding: "6px" }}
             >
-              <option value={2}>2 px</option>
-              <option value={5}>5 px</option>
-              <option value={8}>8 px</option>
-              <option value={12}>12 px</option>
+              <option value={2}>2px (Thin)</option>
+              <option value={5}>5px (Medium)</option>
+              <option value={8}>8px (Thick)</option>
+              <option value={12}>12px (Extra)</option>
             </select>
-            <button
-              onClick={() => setLogoIsErasing(!logoIsErasing)}
-              style={{
-                backgroundColor: logoIsErasing ? "#ff6347" : "#87cefa",
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-              }}
-            >
-              {logoIsErasing ? "Eraser" : "Brush"}
-            </button>
-            <button
-              onClick={() => setShowLogoColorPicker(!showLogoColorPicker)}
-              style={{
-                backgroundColor: showLogoColorPicker ? "#ff6347" : "#87cefa",
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-              }}
-            >
-              Color
-            </button>
+
+            {/* Removed the old toggle button; use the tool state instead */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => setTool("brush")}
+                style={{
+                  backgroundColor: tool === "brush" ? "#87cefa" : "#ccc",
+                  border: "none",
+                  padding: "6px 12px",
+                }}
+              >
+                Brush
+              </button>
+              <button
+                onClick={() => setTool("eraser")}
+                style={{
+                  backgroundColor: tool === "eraser" ? "#ff6347" : "#ccc",
+                  border: "none",
+                  padding: "6px 12px",
+                }}
+              >
+                Eraser
+              </button>
+            </div>
+
+            {/* 2) In the toolbar, add a color chooser: */}
+            <label style={{ display: "block", margin: "10px 0" }}>
+              Brush Color:
+              <input
+                type="color"
+                value={brushColor}             // changed
+                onChange={(e) => setBrushColor(e.target.value)}  // changed
+                style={{ marginLeft: "10px" }}
+              />
+            </label>
+
             {showLogoColorPicker && (
               <div
                 style={{
+                  position: "absolute",
+                  top: "60px",
+                  left: "10px",
+                  zIndex: 999999,
                   backgroundColor: "#fff",
-                  border: "1px solid #333",
-                  zIndex: 99999,
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  padding: "10px",
                 }}
               >
                 <SketchPicker
@@ -794,7 +897,35 @@ function LandingPage({ activeTheme }) {
                 />
               </div>
             )}
+
+            <button
+              onClick={saveLogo}
+              style={{
+                backgroundColor: "#32cd32",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Save
+            </button>
+
+            <button
+              onClick={() => setShowLogoBoard(false)}
+              style={{
+                backgroundColor: "#ccc",
+                padding: "5px 10px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Close
+            </button>
           </div>
+
           <canvas
             ref={logoCanvasRef}
             width={canvasSize.width}
@@ -803,40 +934,40 @@ function LandingPage({ activeTheme }) {
             onMouseMove={handleLogoMouseMove}
             onMouseUp={handleLogoMouseUp}
             style={{
-              margin: 0,
-              padding: 0,
-              border: "none",
               position: "absolute",
               top: 0,
               left: 0,
               width: "100%",
               height: "100%",
-              cursor: "crosshair",
+              cursor: "none", // hides default cursor
               zIndex: 1,
+              margin: 0,
+              padding: 0,
             }}
           />
-          <button
-            onClick={saveLogo}
+          {/* Cursor Preview for Logo */}
+          <div
             style={{
-              position: "absolute",
-              bottom: "20px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              padding: "10px 20px",
-              borderRadius: "5px",
-              backgroundColor: "#32cd32",
-              color: "#fff",
-              zIndex: 2,
-              border: "none",
-              cursor: "pointer",
+              position: "fixed",
+              pointerEvents: "none",
+              left: cursorPos.x,
+              top: cursorPos.y,
+              width: logoLineWidth * 2,
+              height: logoLineWidth * 2,
+              borderRadius: "50%",
+              border: "2px solid #000",
+              backgroundColor:
+                tool === "eraser"
+                  ? "rgba(255,255,255,0.6)"
+                  : logoColor + "44", // partial alpha
+              transform: "translate(-50%, -50%)",
+              zIndex: 999999,
             }}
-          >
-            Save Logo
-          </button>
+          />
         </div>
       )}
 
-      {/* Dish drawing board overlay */}
+      {/* Dish Drawing Overlay */}
       {showDishBoard && (
         <div
           style={{
@@ -845,16 +976,16 @@ function LandingPage({ activeTheme }) {
             left: 0,
             width: "100vw",
             height: "100vh",
-            backgroundColor: "#faf0e6",
-            zIndex: 9999,
             margin: 0,
             padding: 0,
+            backgroundColor: "#faf0e6",
+            zIndex: 9999,
           }}
         >
           <h1
             style={{
               position: "absolute",
-              top: "10px",
+              top: "0px",
               left: "50%",
               transform: "translateX(-50%)",
               color: "#333",
@@ -865,6 +996,115 @@ function LandingPage({ activeTheme }) {
           >
             Draw Your Dish
           </h1>
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "20px",
+              backgroundColor: "#f3eada",
+              padding: "10px",
+              borderRadius: "0 8px 8px 0",
+              zIndex: 99999,
+            }}
+          >
+            <select
+              value={dishLineWidth}
+              onChange={(e) => setDishLineWidth(Number(e.target.value))}
+            >
+              <option value={2}>Thin</option>
+              <option value={5}>Medium</option>
+              <option value={8}>Thick</option>
+              <option value={12}>Extra</option>
+            </select>
+
+            {/* Removed the toggle button; rely on tool state */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => setTool("brush")}
+                style={{
+                  backgroundColor: tool === "brush" ? "#87cefa" : "#ccc",
+                  border: "none",
+                  padding: "6px 12px",
+                }}
+              >
+                Brush
+              </button>
+              <button
+                onClick={() => setTool("eraser")}
+                style={{
+                  backgroundColor: tool === "eraser" ? "#ff6347" : "#ccc",
+                  border: "none",
+                  padding: "6px 12px",
+                }}
+              >
+                Eraser
+              </button>
+            </div>
+
+            {/* 3) Use brushColor while drawing: */}
+            <label style={{ display: "block", margin: "10px 0" }}>
+              Brush Color:
+              <input
+                type="color"
+                value={brushColor}
+                onChange={(e) => setBrushColor(e.target.value)}
+                style={{ marginLeft: "10px" }}
+              />
+            </label>
+
+            {showDishColorPicker && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "60px",
+                  left: "10px",
+                  backgroundColor: "#fff",
+                  border: "1px solid #333",
+                  zIndex: 999999,
+                  padding: "10px",
+                  borderRadius: "8px",
+                }}
+              >
+                <SketchPicker
+                  color={dishColor}
+                  onChangeComplete={(c) => setDishColor(c.hex)}
+                />
+              </div>
+            )}
+
+            <button
+              onClick={saveDish}
+              style={{
+                backgroundColor: "#32cd32",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Save
+            </button>
+
+            <button
+              onClick={() => setShowDishBoard(false)}
+              style={{
+                backgroundColor: "#ccc",
+                padding: "5px 10px",
+                borderRadius: "6px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Close
+            </button>
+          </div>
+
           <canvas
             ref={dishCanvasRef}
             width={canvasSize.width}
@@ -878,100 +1118,35 @@ function LandingPage({ activeTheme }) {
               left: 0,
               width: "100%",
               height: "100%",
-              cursor: "crosshair",
+              cursor: "none",
               zIndex: 1,
+              margin: 0,
+              padding: 0,
             }}
           />
+          {/* Cursor Preview for Dish */}
           <div
             style={{
-              position: "absolute",
-              top: "60px",
-              left: "20px",
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: "8px",
-              zIndex: 3,
+              position: "fixed",
+              pointerEvents: "none",
+              left: cursorPos.x,
+              top: cursorPos.y,
+              width: tool === "eraser" ? dishLineWidth * 4 : dishLineWidth * 2,
+              height: tool === "eraser" ? dishLineWidth * 4 : dishLineWidth * 2,
+              borderRadius: "50%",
+              border: "2px solid #000",
+              backgroundColor:
+                tool === "eraser"
+                  ? "rgba(255,255,255,0.6)"
+                  : dishColor + "55",
+              transform: "translate(-50%, -50%)",
+              zIndex: 100000,
             }}
-          >
-            <select
-              value={dishLineWidth}
-              onChange={(e) => setDishLineWidth(Number(e.target.value))}
-              style={{ padding: "6px" }}
-            >
-              <option value={2}>2 px</option>
-              <option value={5}>5 px</option>
-              <option value={8}>8 px</option>
-              <option value={12}>12 px</option>
-            </select>
-            <button
-              onClick={() => setDishIsErasing(false)}
-              style={{
-                backgroundColor: !dishIsErasing ? dishColor : "#ff6347",
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-              }}
-            >
-              Brush
-            </button>
-            <button
-              onClick={() => setDishIsErasing(true)}
-              style={{
-                backgroundColor: dishIsErasing ? "#ff6347" : dishColor,
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-              }}
-            >
-              Eraser
-            </button>
-            <button
-              onClick={() => setShowDishColorPicker(!showDishColorPicker)}
-              style={{
-                backgroundColor: showDishColorPicker ? "#ff6347" : "#87cefa",
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                border: "none",
-              }}
-            >
-              Color
-            </button>
-            {showDishColorPicker && (
-              <div
-                style={{
-                  backgroundColor: "#fff",
-                  border: "1px solid #333",
-                  zIndex: 99999,
-                }}
-              >
-                <SketchPicker
-                  color={dishColor}
-                  onChangeComplete={(c) => setDishColor(c.hex)}
-                />
-              </div>
-            )}
-            <button
-              onClick={saveDish}
-              style={{
-                backgroundColor: "#32cd32",
-                color: "#fff",
-                padding: "8px 16px",
-                borderRadius: "5px",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              Save
-            </button>
-          </div>
+          />
         </div>
       )}
 
-      {/* Dish details overlay */}
+      {/* Dish Details Overlay */}
       {showDishDetails && (
         <div
           style={{
@@ -1034,7 +1209,7 @@ function LandingPage({ activeTheme }) {
         </div>
       )}
 
-      {/* Quests Button */}
+      {/* Quests */}
       <button
         onClick={() => setShowQuestMenu(!showQuestMenu)}
         style={{
@@ -1069,7 +1244,6 @@ function LandingPage({ activeTheme }) {
         )}
       </button>
 
-      {/* Slide-out quest menu */}
       {showQuestMenu && (
         <div
           style={{
@@ -1082,13 +1256,12 @@ function LandingPage({ activeTheme }) {
             border: "1px solid #ccc",
             borderRadius: "8px",
             zIndex: 9999,
+            textAlign: "left",
           }}
         >
-          <h3 style={{ margin: 0 }}>
-            {activeTheme ? activeTheme.name : questThemes[0].name}
-          </h3>
+          <h3 style={{ margin: 0 }}>{usedTheme.name}</h3>
           <hr />
-          {themeTasks.map((task) => (
+          {tasks.map((task) => (
             <div key={task.id} style={{ marginBottom: "8px" }}>
               <span style={{ marginRight: "8px" }}>
                 {task.isComplete ? "✔️" : "⬜️"}
@@ -1097,7 +1270,6 @@ function LandingPage({ activeTheme }) {
             </div>
           ))}
 
-          {/* Show End Level if all tasks done */}
           {tasksRemaining === 0 && (
             <button
               style={{
@@ -1120,25 +1292,75 @@ function LandingPage({ activeTheme }) {
         </div>
       )}
 
-      {/* End Level button (always visible if tasksRemaining is 0) */}
-      {tasksRemaining === 0 && (
-        <button
+      {/* End Screen */}
+      {showEndScreen && (
+        <div
           style={{
             position: "fixed",
-            bottom: "20px",
-            right: "20px", // was left: "20px"
-            backgroundColor: "#d97536",
-            border: "none",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            cursor: "pointer",
-            zIndex: 9999,
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0,0,0,0.7)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "fadeIn 0.6s linear",
           }}
-          onClick={() => alert("Level Completed!")}
         >
-          End Level
-        </button>
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "40px",
+              borderRadius: "16px",
+              textAlign: "center",
+              maxWidth: "500px",
+              width: "90%",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+              animation: "scaleUp 0.5s ease-out",
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: "2.2rem" }}>Congratulations!</h2>
+            <p style={{ fontSize: "1.2rem", margin: "10px 0 20px" }}>
+              You’ve completed all tasks!
+            </p>
+            {/* 3-Star Rating - optional simple animations */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "15px" }}>
+              {[1, 2, 3].map((star) => (
+                <div
+                  key={star}
+                  style={{
+                    fontSize: "3rem",
+                    color: "#FFD700",
+                    animation: `popStar 0.4s ease forwards ${star * 0.2}s`,
+                  }}
+                >
+                  ★
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                // close the end screen and give a notification
+                setShowEndScreen(false);
+                alert("Returning to main menu...");
+                navigate("/"); // Go back to HomePage
+              }}
+              style={{
+                marginTop: "20px",
+                backgroundColor: "#d97536",
+                color: "#fff",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

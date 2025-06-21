@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import HomePage from "./HomePage";
-import LandingPage from "./LandingPage";
+import HomePage from "./components/HomePage.jsx";
+import LandingPage from "./components/LandingPage.jsx";
 
 function App() {
   const [activeTheme, setActiveTheme] = useState(null);
